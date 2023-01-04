@@ -1,2 +1,3 @@
-# glowing-giggle
-The uni java jsoup/log4j project
+# Still in setup
+
+Unreasonably unorganized atm, uploaded just for backup purposes due to worksystem switching 
