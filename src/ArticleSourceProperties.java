@@ -48,31 +48,39 @@ public class ArticleSourceProperties {
         return articleMatcher;
     }
 
+    private String sourceName = null;
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
     public ArticleSourceProperties(String webpageURL, String matchersToDisassambly) {
         this.pageURL = webpageURL;
+        
         String dissasembledMatchers[] = matchersToDisassambly.split(";");
-        this.containerMatcher = dissasembledMatchers[0];
-        this.urlMatcher = dissasembledMatchers[1];
-        this.titleMatcher = dissasembledMatchers[2]; // these three have to exist
+        this.sourceName = dissasembledMatchers[0];
+        this.containerMatcher = dissasembledMatchers[1];
+        this.urlMatcher = dissasembledMatchers[2];
+        this.titleMatcher = dissasembledMatchers[3]; // these three have to exist
         // these below don't need to
-        if (dissasembledMatchers.length > 3) {
-            if (!dissasembledMatchers[3].isBlank()) {
-                this.subTitleMatcher = dissasembledMatchers[3];
-            }
-        }
         if (dissasembledMatchers.length > 4) {
             if (!dissasembledMatchers[4].isBlank()) {
-                this.authorMatcher = dissasembledMatchers[4];
+                this.subTitleMatcher = dissasembledMatchers[4];
             }
         }
         if (dissasembledMatchers.length > 5) {
             if (!dissasembledMatchers[5].isBlank()) {
-                this.dateMatcher = dissasembledMatchers[5];
+                this.authorMatcher = dissasembledMatchers[5];
             }
         }
         if (dissasembledMatchers.length > 6) {
             if (!dissasembledMatchers[6].isBlank()) {
-                this.articleMatcher = dissasembledMatchers[6];
+                this.dateMatcher = dissasembledMatchers[6];
+            }
+        }
+        if (dissasembledMatchers.length > 7) {
+            if (!dissasembledMatchers[7].isBlank()) {
+                this.articleMatcher = dissasembledMatchers[7];
             }
         }
     }
