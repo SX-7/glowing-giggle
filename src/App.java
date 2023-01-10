@@ -8,12 +8,73 @@ import org.jsoup.select.Elements;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Map.Entry;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
+
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+final class ViewAbstractTable extends AbstractTableModel{
+    //TODO: sourcing elements as HashTable<Article>, until Lucene is added
+    private String[] columnNames = {"Source","Title","SubTitle","First Paragraph"};
+    private ArrayList<Article> data = null;    
+
+
+    public ViewAbstractTable(ArrayList<Article> data) {
+        setData(data);
+    }
+
+    public void setData(ArrayList<Article> data) {
+        this.data = data;
+    }
+
+    public String getUrl(int row){
+        return this.data.get(row).articleURL;
+    }
+
+    public int getColumnCount() {
+        return this.columnNames.length;
+    }
+
+    public int getRowCount() {
+        return this.data.size();
+    }
+
+    public String getColumnName(int col) {
+        return this.columnNames[col];
+    }
+
+    public Object getValueAt(int row, int col) {
+        Object retOb = null;
+        switch (col) {
+            case 0:
+                retOb=this.data.get(row).articleSource;
+                break;
+            case 1:
+                retOb=this.data.get(row).articleTitle;
+                break;
+            case 2:
+                retOb=this.data.get(row).articleSubTitle;
+                break;
+            case 3:
+                retOb=this.data.get(row).articleContent;
+                break;
+            default:
+                break;
+        }
+        return retOb;
+    }
+}
 public class App {
     final static Logger logger = LogManager.getLogger(App.class.getName());
 
@@ -44,9 +105,9 @@ public class App {
         return ArticleMatchers;
     }
 
-    private static HashSet<Article> getArticles(HashSet<ArticleSourceProperties> articleMatchers)
+    private static ArrayList<Article> getArticles(HashSet<ArticleSourceProperties> articleMatchers)
     {
-        HashSet<Article> articles = new HashSet<Article>();
+        ArrayList<Article> articles = new ArrayList<Article>();
         for (ArticleSourceProperties articleProps : articleMatchers) {
             Elements articlesScraped = null;
             try {
@@ -59,16 +120,21 @@ public class App {
             }
             // if we have the data, we can process it
             for (Element articleScraped : articlesScraped) {
-                Article ar = new Article(articleScraped.select(articleProps.getUrlMatcher()).first().attr("abs:href"),articleScraped.select(articleProps.getTitleMatcher()).first().text());
-                if (!articleProps.getAuthorMatcher().isBlank()) { 
-                    ar.articleAuthor = articleScraped.select(articleProps.getAuthorMatcher()).first().text();
+                //if this fails, it means that the article selector is wrong, or something similar. log an error, and move to the next one
+                Article ar = null;
+                try {
+                    ar = new Article(articleScraped.select(articleProps.getUrlMatcher()).first().attr("abs:href"),articleScraped.select(articleProps.getTitleMatcher()).first().text());    
+                } catch (Exception e) {
+                    logger.error("Error while scraping basic data, likely following matchers not found. URL matcher is '"+articleProps.getUrlMatcher()+"', title matcher is '"+articleProps.getTitleMatcher()+"', article containter scraped is: \n"+articleScraped);
+                    continue;
                 }
+                
                 if (!articleProps.getSubTitleMatcher().isBlank()) {
-                    ar.articleSubTitle = articleScraped.select(articleProps.getSubTitleMatcher()).first().text();
+                    if (articleScraped.select(articleProps.getSubTitleMatcher()).first() != null) {
+                        ar.articleSubTitle = articleScraped.select(articleProps.getSubTitleMatcher()).first().text();
+                    }
                 }
-                if (!articleProps.getDateMatcher().isBlank()) {
-                    ar.articleDate = articleScraped.select(articleProps.getDateMatcher()).first().text();
-                }
+                ar.articleSource = articleProps.getSourceName();
                 if (!articleProps.getArticleMatcher().isBlank()) {
                     try {
                         Document article = Jsoup.connect(ar.articleURL).get();
@@ -86,12 +152,33 @@ public class App {
         return articles;
     }
 
+    //SO copied code https://stackoverflow.com/questions/10967451/open-a-link-in-browser-with-java-button
+    public static boolean openWebpage(URI uri) throws Exception{
+        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+        logger.trace("Desktop value is "+desktop);
+        if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
+            desktop.browse(uri);
+            logger.debug("Opened web browser with adress "+uri+", desktop "+desktop);
+            return true;
+        }
+        logger.error("Failed to open web browser");
+        return false;
+    }
+    
+    public static boolean openWebpage(URL url) throws Exception {
+        logger.trace("Converting "+url+" to URI");
+        return openWebpage(url.toURI());
+    }
+
     public static void createAndShowGUI() {
         // make a new window
+        HashSet<ArticleSourceProperties> internalProperties = getProperties();
+
         JFrame jf = new JFrame("News Scraper");
         JPanel pane = new JPanel(new GridBagLayout());
         
         JTextField textField = new JTextField(20);
+        textField.setToolTipText("Searches in Title and SubTitle fields");
         GridBagConstraints tfc = new GridBagConstraints();
         tfc.fill = GridBagConstraints.HORIZONTAL;
         tfc.weightx = 1;
@@ -108,9 +195,56 @@ public class App {
         bc.gridx=2;
         pane.add(refreshButton,bc);
 
+
+        ViewAbstractTable dataTable = new ViewAbstractTable(getArticles(internalProperties));
+        JTable table = new JTable(dataTable);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(1).setPreferredWidth(400);
+        table.getColumnModel().getColumn(2).setPreferredWidth(250);
+        table.getColumnModel().getColumn(3).setPreferredWidth(250);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent event) {
+                if (event.getValueIsAdjusting()){
+                    return;
+                }
+                try {
+                    openWebpage(new URL(dataTable.getUrl(table.getSelectedRow())));
+                } catch (Exception e) {
+                    logger.error("Failed opening the web browser ",e);
+                }
+            }
+        });
+        JScrollPane scrollPane = new JScrollPane(table);
+        GridBagConstraints sc = new GridBagConstraints();
+        sc.gridy=1;
+        sc.gridwidth=GridBagConstraints.REMAINDER;
+        sc.weighty=1;
+        sc.fill = GridBagConstraints.BOTH;
+        sc.gridwidth=750;
+        pane.add(scrollPane,sc);
+        
+
+        refreshButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent event){
+                dataTable.setData(getArticles(internalProperties));
+                dataTable.fireTableDataChanged();
+            }
+        });
+
+        //TODO: add a refresh button callback that disables the button, starts the refresh, and enables it
+        //then clears the searchbox
+
+        //search button leave unimplemented rn
+
+        //TODO: open webbrowser on the article on row select
+
         jf.getContentPane().add(pane);
         // set properties
         jf.setMinimumSize(new Dimension(500,200));
+        jf.setPreferredSize(new Dimension(1000,500));
         jf.pack();
         jf.setLocationRelativeTo(null);
         jf.setVisible(true);

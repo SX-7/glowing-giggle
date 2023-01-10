@@ -30,18 +30,6 @@ public class ArticleSourceProperties {
         return subTitleMatcher;
     }
 
-    private String authorMatcher = "";
-
-    public String getAuthorMatcher() {
-        return authorMatcher;
-    }
-
-    private String dateMatcher = "";
-
-    public String getDateMatcher() {
-        return dateMatcher;
-    }
-
     private String articleMatcher = "";
 
     public String getArticleMatcher() {
@@ -74,17 +62,7 @@ public class ArticleSourceProperties {
         }
         if (dissasembledMatchers.length > 5) {
             if (!dissasembledMatchers[5].isBlank()) {
-                this.authorMatcher = dissasembledMatchers[5];
-            }
-        }
-        if (dissasembledMatchers.length > 6) {
-            if (!dissasembledMatchers[6].isBlank()) {
-                this.dateMatcher = dissasembledMatchers[6];
-            }
-        }
-        if (dissasembledMatchers.length > 7) {
-            if (!dissasembledMatchers[7].isBlank()) {
-                this.articleMatcher = dissasembledMatchers[7];
+                this.articleMatcher = dissasembledMatchers[5];
             }
         }
     }
