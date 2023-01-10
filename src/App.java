@@ -225,7 +225,6 @@ public class App {
         sc.fill = GridBagConstraints.BOTH;
         sc.gridwidth=750;
         pane.add(scrollPane,sc);
-        
 
         refreshButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent event){
@@ -234,12 +233,11 @@ public class App {
             }
         });
 
-        //TODO: add a refresh button callback that disables the button, starts the refresh, and enables it
-        //then clears the searchbox
-
-        //search button leave unimplemented rn
-
-        //TODO: open webbrowser on the article on row select
+        searchButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent event){
+                
+            }
+        });
 
         jf.getContentPane().add(pane);
         // set properties
